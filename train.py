@@ -70,6 +70,9 @@ if __name__ == '__main__':
     args = parse_args()
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     ctx = mx.cpu() if not ctx else ctx
+    # resume
+    args.prefix = os.path.join(os.getcwd(), 'model', 'ssd')
+    args.resume = 199
     train_net(args.network, args.dataset, args.image_set, args.year,
               args.devkit_path, args.batch_size,
               args.data_shape, (args.mean_r, args.mean_g, args.mean_b),
