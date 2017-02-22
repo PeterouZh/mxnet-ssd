@@ -1,3 +1,6 @@
+#emacs
+*#
+
 # User defined
 data/*
 !data/demo/

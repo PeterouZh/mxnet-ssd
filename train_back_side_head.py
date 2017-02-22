@@ -59,7 +59,7 @@ def parse_args():
                         help='refactor learning rate every N epoch')
     parser.add_argument('--lr-ratio', dest='lr_refactor_ratio', type=float, default=0.8,
                         help='ratio to refactor learning rate')
-    parser.add_argument('--log', dest='log_file', type=str, default="train.log",
+    parser.add_argument('--log', dest='log_file', type=str, default="train_back_side_head.log",
                         help='save training log to file')
     parser.add_argument('--monitor', dest='monitor', type=int, default=0,
                         help='log network parameters every N iters if larger than 0')
@@ -71,10 +71,8 @@ if __name__ == '__main__':
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     ctx = mx.cpu() if not ctx else ctx
     # resume
-    args.prefix = os.path.join(os.getcwd(), 'model', 'ssd')
+    args.prefix = os.path.join(os.getcwd(), 'model', 'ssd_back_side_head')
     args.resume = 199
-    args.data_shape = 512
-    args.batch_size = 16
     train_net(args.network, args.dataset, args.image_set, args.year,
               args.devkit_path, args.batch_size,
               args.data_shape, (args.mean_r, args.mean_g, args.mean_b),
