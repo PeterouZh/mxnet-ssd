@@ -3,7 +3,7 @@ import tools.find_mxnet
 import mxnet as mx
 import os
 import sys
-from train.train_net import train_net
+from train.train_net_back_side_head import train_net # train_net for back side head
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a Single-shot detection network')
@@ -63,6 +63,10 @@ def parse_args():
                         help='save training log to file')
     parser.add_argument('--monitor', dest='monitor', type=int, default=0,
                         help='log network parameters every N iters if larger than 0')
+    parser.add_argument('--mat', dest='mat', type = str, default = 'mat',
+                        help = 'annotations subdir of back side of head dataset')
+    parser.add_argument('--parent_path', dest = 'parent_path', type = str, default = '',
+                        help = 'parent dir of image_set and mat')
     args = parser.parse_args()
     return args
 
@@ -71,13 +75,32 @@ if __name__ == '__main__':
     ctx = [mx.gpu(int(i)) for i in args.gpus.split(',')]
     ctx = mx.cpu() if not ctx else ctx
     # resume
+    args.dataset = 'back_side_head'
+    args.image_set = 'back_side_head'
+    args.mat = 'mat'
+    args.parent_path = '/home/shhs/usr/data/back_side_head'
+    args.batch_size = 16
+    args.data_shape = 512
+    args.end_epoch = 30000
+    args.frequent = 5
+    args.lr_refactor_epoch = 10000000
+    args.learning_rate = 0.001
     args.prefix = os.path.join(os.getcwd(), 'model', 'ssd_back_side_head')
-    args.resume = 199
-    train_net(args.network, args.dataset, args.image_set, args.year,
-              args.devkit_path, args.batch_size,
-              args.data_shape, (args.mean_r, args.mean_g, args.mean_b),
+    args.resume = 1300
+    train_net(args.network,
+              args.dataset,
+              args.image_set,
+              args.mat,
+              args.parent_path,
+              args.batch_size,
+              args.data_shape,
+              (args.mean_r, args.mean_g, args.mean_b),
               args.resume, args.finetune, args.pretrained,
-              args.epoch, args.prefix, ctx, args.begin_epoch, args.end_epoch,
-              args.frequent, args.learning_rate, args.momentum, args.weight_decay,
-              args.val_image_set, args.val_year, args.lr_refactor_epoch,
+              args.epoch, args.prefix, ctx, args.begin_epoch,
+              args.end_epoch,
+              args.frequent,
+              args.learning_rate,
+              args.momentum, args.weight_decay,
+              args.val_image_set, args.val_year,
+              args.lr_refactor_epoch,
               args.lr_refactor_ratio, args.monitor, args.log_file)

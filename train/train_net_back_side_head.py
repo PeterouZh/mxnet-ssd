@@ -7,48 +7,33 @@ import importlib
 from initializer import CustomInitializer
 from metric import MultiBoxMetric
 from dataset.iterator import DetIter
+from dataset.back_side_head import BackSideHead # load imgs path list of back side of head dataset
 from dataset.pascal_voc import PascalVoc
 from dataset.concat_db import ConcatDB
 from config.config import cfg
 
-def load_back_side_head(image_set, year, devkit_path, shuffle=False):
+def load_back_side_head(image_set, mat, parent_path, shuffle=False):
     """
-    wrapper function for loading pascal voc dataset
+    wrapper function for loading back side of head dataset
 
     Parameters:
     ----------
-    image_set : str
-        train, trainval...
-    year : str
-        2007, 2012 or combinations splitted by comma
-    devkit_path : str
-        root directory of dataset
-    shuffle : bool
-        whether to shuffle initial list
+     image_set : str
+         Subdirectory of images
+     mat : str
+         Subdirectory of images' annotations
+     parent_path : str
+         Parent path of image_set and mat
+    shuffle : boolean
+        whether to initial shuffle the image list
 
     Returns:
     ----------
     Imdb
     """
-    image_set = [y.strip() for y in image_set.split(',')]
-    assert image_set, "No image_set specified"
-    year = [y.strip() for y in year.split(',')]
-    assert year, "No year specified"
-
-    # make sure (# sets == # years)
-    if len(image_set) > 1 and len(year) == 1:
-        year = year * len(image_set)
-    if len(image_set) == 1 and len(year) > 1:
-        image_set = image_set * len(year)
-    assert len(image_set) == len(year), "Number of sets and year mismatch"
-
-    imdbs = []
-    for s, y in zip(image_set, year):
-        imdbs.append(PascalVoc(s, y, devkit_path, shuffle, is_train=True))
-    if len(imdbs) > 1:
-        return ConcatDB(imdbs, shuffle)
-    else:
-        return imdbs[0]
+    is_train = True
+    imdb = BackSideHead(image_set, mat, parent_path, shuffle, is_train)
+    return imdb
 
 def load_pascal(image_set, year, devkit_path, shuffle=False):
     """
@@ -111,7 +96,12 @@ def convert_pretrained(name, args):
         del args['fc8_bias']
     return args
 
-def train_net(net, dataset, image_set, year, devkit_path, batch_size,
+def train_net(net,
+              dataset,
+              image_set,
+              mat,
+              parent_path,
+              batch_size,
                data_shape, mean_pixels, resume, finetune, pretrained, epoch, prefix,
                ctx, begin_epoch, end_epoch, frequent, learning_rate,
                momentum, weight_decay, val_set, val_year,
@@ -200,7 +190,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
 
     # load dataset
     if dataset == 'back_side_head':
-        imdb = load_back_side_head()
+        imdb = load_back_side_head(image_set, mat, parent_path, shuffle = True)
         val_imdb = None
     else:
         raise NotImplementedError, "Dataset " + dataset + " not supported"
@@ -270,7 +260,7 @@ def train_net(net, dataset, image_set, year, devkit_path, batch_size,
 
     # fit
     batch_end_callback = mx.callback.Speedometer(train_iter.batch_size, frequent=frequent)
-    epoch_end_callback = mx.callback.do_checkpoint(prefix)
+    epoch_end_callback = mx.callback.do_checkpoint(prefix, period = 100)
     iter_refactor = lr_refactor_epoch * imdb.num_images / train_iter.batch_size
     lr_scheduler = mx.lr_scheduler.FactorScheduler(iter_refactor, lr_refactor_ratio)
     optimizer_params={'learning_rate':learning_rate,
