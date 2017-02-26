@@ -86,7 +86,7 @@ if __name__ == '__main__':
     args.lr_refactor_epoch = 10000000
     args.learning_rate = 0.001
     args.prefix = os.path.join(os.getcwd(), 'model', 'ssd_back_side_head')
-    args.resume = 1300
+    args.resume = 4700
     train_net(args.network,
               args.dataset,
               args.image_set,

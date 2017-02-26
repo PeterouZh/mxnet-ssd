@@ -3,6 +3,7 @@ import numpy as np
 from timeit import default_timer as timer
 from dataset.testdb import TestDB
 from dataset.iterator import DetIter
+from tools.image_processing import resize, transform
 
 class Detector(object):
     """
@@ -168,3 +169,38 @@ class Detector(object):
             img = cv2.imread(im_list[k])
             img[:, :, (0, 1, 2)] = img[:, :, (2, 1, 0)]
             self.visualize_detection(img, det, classes, thresh)
+
+    def detect_using_camera(self, show_timer = False):
+        import cv2
+        cap = cv2.VideoCapture(1)
+        while True:
+            ret, frame = cap.read()
+            assert ret, "Open camera failed"
+            width = frame.shape[1]
+            height = frame.shape[0]
+            data = resize(frame, (self.data_shape, self.data_shape), cv2.INTER_LINEAR)
+            data = transform(data, self.mean_pixels)
+            mx_img_batch = mx.nd.array([data, ])
+            data_batch = mx.io.DataBatch(data = [mx_img_batch], label = [None])
+            start = timer()
+            self.mod.forward(data_batch, is_train = False)
+            time_elapsed = timer() - start
+            detections = self.mod.get_outputs()[0].asnumpy()
+            det = detections[0, :, :]
+            results = det[np.where(det[:, 0] >= 0)[0]]
+            thresh = 0.3
+            for i in range(results.shape[0]):
+                score = results[i, 1]
+                if score > thresh:
+                    color = [255, 0, 0]
+                    xmin = int(results[i, 2] * width)
+                    ymin = int(results[i, 3] * height)
+                    xmax = int(results[i, 4] * width)
+                    ymax = int(results[i, 5] * height)
+                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 3)
+                    if show_timer:
+                        print "Detection time : {:.4f} sec".format(time_elapsed)
+            cv2.imshow('frame', frame)
+            if cv2.waitKey(50) & 0xFF == ord('q'):
+                break
+
