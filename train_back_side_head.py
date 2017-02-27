@@ -76,7 +76,8 @@ if __name__ == '__main__':
     ctx = mx.cpu() if not ctx else ctx
     # resume
     args.dataset = 'back_side_head'
-    args.image_set = 'back_side_head'
+    args.image_set = 'back_side_head_train'
+    args.val_image_set = 'back_side_head_val'
     args.mat = 'mat'
     args.parent_path = '/home/shhs/usr/data/back_side_head'
     args.batch_size = 16
@@ -101,6 +102,7 @@ if __name__ == '__main__':
               args.frequent,
               args.learning_rate,
               args.momentum, args.weight_decay,
-              args.val_image_set, args.val_year,
+              args.val_image_set,
+              args.val_year,
               args.lr_refactor_epoch,
               args.lr_refactor_ratio, args.monitor, args.log_file)

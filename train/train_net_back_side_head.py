@@ -104,7 +104,8 @@ def train_net(net,
               batch_size,
                data_shape, mean_pixels, resume, finetune, pretrained, epoch, prefix,
                ctx, begin_epoch, end_epoch, frequent, learning_rate,
-               momentum, weight_decay, val_set, val_year,
+               momentum, weight_decay,
+              val_set, val_year,
                lr_refactor_epoch, lr_refactor_ratio,
                iter_monitor=0, log_file=None):
     """
@@ -191,7 +192,7 @@ def train_net(net,
     # load dataset
     if dataset == 'back_side_head':
         imdb = load_back_side_head(image_set, mat, parent_path, shuffle = True)
-        val_imdb = None
+        val_imdb = load_back_side_head(val_set, mat, parent_path, shuffle = False)
     else:
         raise NotImplementedError, "Dataset " + dataset + " not supported"
 
