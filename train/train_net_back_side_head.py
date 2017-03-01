@@ -21,7 +21,7 @@ def load_back_side_head(image_set, mat, parent_path, shuffle=False):
      image_set : str
          Subdirectory of images
      mat : str
-         Subdirectory of images' annotations
+         Subdirectory of images' annotations or label file
      parent_path : str
          Parent path of image_set and mat
     shuffle : boolean
@@ -226,7 +226,7 @@ def train_net(net,
 
     # load pretrained or resume from previous state
     ctx_str = '('+ ','.join([str(c) for c in ctx]) + ')'
-    if resume > 0:
+    if resume >= 0:
         logger.info("Resume training with {} from epoch {}"
             .format(ctx_str, resume))
         _, args, auxs = mx.model.load_checkpoint(prefix, resume)

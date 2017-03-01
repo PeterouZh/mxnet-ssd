@@ -16,7 +16,7 @@ class BackSideHead(Imdb):
      image_set : str
          Subdirectory of images
      mat : str
-         Subdirectory of images' annotations
+         Subdirectory of images' annotations or label file
      parent_path : str
          Parent path of image_set and mat
     shuffle : boolean
@@ -27,7 +27,12 @@ class BackSideHead(Imdb):
     def __init__(self, image_set, mat, parent_path, shuffle = True, is_train = False):
         super(BackSideHead, self).__init__(image_set)
         self.image_set = image_set
-        self.mat_path = mat
+        if os.path.isdir(os.path.join(parent_path, mat)):
+            self.mat_path = mat
+        elif os.path.isfile(os.path.join(parent_path, mat)):
+            self.mat_file = mat
+        else:
+            assert 0, "Incorrect mat file : {}".format(mat)
         self.parent_path = parent_path
         self.data_path = os.path.join(parent_path, image_set)
         self.img_extension = '.jpg'
@@ -35,14 +40,19 @@ class BackSideHead(Imdb):
         self.is_train = is_train
 
         self.classes = ['back_side_head']
-        self.config = {'padding' : 10}
+        self.config = {'padding' : 60}
 
         self.num_classes = len(self.classes)
         self.image_set_path_list = self._load_image_set_path(self.data_path, shuffle)
         self.num_images = len(self.image_set_path_list)
+        assert not (hasattr(self, 'mat_path') and hasattr(self, 'mat_file')), "mat_path and mat_file can't be included at the same time."
         if self.is_train:
-            self.labels = self._load_image_labels()
-        pass
+            if hasattr(self, 'mat_path'):
+                self.labels = self._load_image_labels_from_path()
+            elif hasattr(self, 'mat_file'):
+                self.labels = self._load_image_labels_from_file()
+            else:
+                assert 0, "Please input correct mat file or path : {}".format(mat)
         
     def image_path_from_index(self, index):
         """
@@ -84,7 +94,7 @@ class BackSideHead(Imdb):
             np.random.shuffle(image_set_path_list)
         return image_set_path_list
 
-    def _load_image_labels(self):
+    def _load_image_labels_from_path(self):
         """
         preprocess all ground-truths
 
@@ -113,6 +123,45 @@ class BackSideHead(Imdb):
                                'constant', constant_values = (-1, -1))
             temp.append(label)
         return np.array(temp)
+
+    def _load_image_labels_from_file(self):
+        """
+        preprocess all ground-truths
+        Load all labels from one mat file
+        
+        Returns:
+        ----------
+        labels packed in [num_images x max_num_objects x 5] tensor
+        """
+        max_objects = 0
+        labels = []
+        label_file = os.path.join(self.parent_path, self.mat_file)
+        name_label_dict = BackSideHead.load_back_side_head_total_labels_from_mat(label_file)
+        for image_file in self.image_set_path_list:
+            img = cv2.imread(image_file)
+            img_name = image_file.split('/')[-1]
+            width = img.shape[1]
+            height = img.shape[0]
+            assert name_label_dict.has_key(img_name), "Can't find {}'s label".format(img_name)
+            label = name_label_dict[img_name]
+            label[:, 1] = label[:, 1] / width # Normalize x and y to the range of [0, 1]
+            label[:, 2] = label[:, 2] / height
+            label[:, 3] = label[:, 3] / width
+            label[:, 4] = label[:, 4] / height
+#            test_image_label(image_file, label[:, 1:])
+            max_objects = max(max_objects, label.shape[0])
+            labels.append(label)
+        assert max_objects > 0, "No objects were found for any of the images."
+        assert max_objects <= self.config['padding'], "Objects exceed padding."
+        self.padding = self.config['padding']
+        print "Max number of heads in one image : {},\nPadding : {}".format(max_objects, self.padding)
+        temp = []
+        for label in labels:
+            label = np.lib.pad(label, ((0, self.padding - label.shape[0]), (0, 0)),
+                               'constant', constant_values = (-1, -1))
+            temp.append(label)
+        return np.array(temp)
+        
 
     @staticmethod
     def load_back_side_head_mat(mat_file, img_width, img_height):
@@ -152,6 +201,40 @@ class BackSideHead(Imdb):
             labels.append([cls_id, n_xmin, n_ymin, n_xmax, n_ymax])
         return np.array(labels)
     
+    @staticmethod
+    def load_back_side_head_total_labels_from_mat(label_file):
+        """
+         Get total labels from one mat file
+        
+        Parameters:
+        ----------
+         label_file : str
+             Labels file for all images
+        Returns:
+        ----------
+         name_label_dict : dict
+             {name : label, ...}
+             label : np.array
+             label shape : num_object x 5[cls_id, xmin, ymin, xmax, ymax]
+        """
+        import scipy.io as scio         # Read .mat file
+        labels_mat = scio.loadmat(label_file, struct_as_record = False)
+        labels_data = labels_mat['data']
+        total_labels = labels_data.flatten() # reduce labels_data from 2 dim to 1 dim
+        cls_id = 0                                          # Zero represents back side of head
+        name_label_dict = {}
+        for one_img in total_labels:
+            img_file_name = one_img.imageFilename[0].encode('utf-8')
+            img_name = img_file_name.split('/')[-1]
+            img_labels = one_img.objectBoundingBoxes
+            img_labels = img_labels.astype(np.float32)
+            img_labels[:, 2] += img_labels[:, 0] # compute xmax : width + xmin
+            img_labels[:, 3] += img_labels[:, 1] # compute ymax : height + ymin
+            img_labels = np.lib.pad(img_labels, ((0, 0), (1, 0)), 'constant',
+                                    constant_values = (cls_id, cls_id)) # Add cls_id to labels
+            name_label_dict.update({img_name : img_labels})
+#        assert 0, 'Debug'
+        return name_label_dict
 
 def test_load_back_side_head_mat(img_file, mat_file):
     """
@@ -181,6 +264,35 @@ def test_load_back_side_head_mat(img_file, mat_file):
     img = cv2.resize(img, (640, 480))
     cv2.imshow('test', img)
     cv2.waitKey(0)
+
+def test_image_label(image, labels):
+    """
+     Plot rects in one image for debuging
+    
+    Parameters:
+    ----------
+     image : str
+         image path	  
+     label : np.array
+         shape : num_rect x 4[xmin, ymin, xmax, ymax]
+    Returns:
+    ----------
+     None
+    """
+    img = cv2.imread(image)
+    width = img.shape[1]
+    height = img.shape[0]
+    for idx in range(labels.shape[0]):
+        rect = labels[idx,]
+        xmin = int(rect[0] * width)
+        ymin = int(rect[1] * height)
+        xmax = int(rect[2] * width)
+        ymax = int(rect[3] * height)
+        cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (255, 0, 0), 5)
+    img = cv2.resize(img, (640, 480))
+    cv2.imshow('test', img)
+    if cv2.waitKey(0) & 0xFF == ord('q'):
+        assert 0, "Exit."
     
 if __name__ == '__main__':
     img_file = '/home/shhs/usr/data/back_side_head/test.jpg'

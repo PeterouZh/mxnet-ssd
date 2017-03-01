@@ -1,9 +1,13 @@
 import mxnet as mx
+import os
+import sys
 import numpy as np
 from timeit import default_timer as timer
 from dataset.testdb import TestDB
 from dataset.iterator import DetIter
 from tools.image_processing import resize, transform
+from tools.get_file_list import GetFileListOrder
+import cv2
 
 class Detector(object):
     """
@@ -176,31 +180,139 @@ class Detector(object):
         while True:
             ret, frame = cap.read()
             assert ret, "Open camera failed"
-            width = frame.shape[1]
-            height = frame.shape[0]
-            data = resize(frame, (self.data_shape, self.data_shape), cv2.INTER_LINEAR)
-            data = transform(data, self.mean_pixels)
-            mx_img_batch = mx.nd.array([data, ])
-            data_batch = mx.io.DataBatch(data = [mx_img_batch], label = [None])
-            start = timer()
-            self.mod.forward(data_batch, is_train = False)
-            time_elapsed = timer() - start
-            detections = self.mod.get_outputs()[0].asnumpy()
-            det = detections[0, :, :]
-            results = det[np.where(det[:, 0] >= 0)[0]]
             thresh = 0.3
-            for i in range(results.shape[0]):
-                score = results[i, 1]
-                if score > thresh:
-                    color = [255, 0, 0]
-                    xmin = int(results[i, 2] * width)
-                    ymin = int(results[i, 3] * height)
-                    xmax = int(results[i, 4] * width)
-                    ymax = int(results[i, 5] * height)
-                    cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 3)
-                    if show_timer:
-                        print "Detection time : {:.4f} sec".format(time_elapsed)
-            cv2.imshow('frame', frame)
+            self.detect_one_image(frame, thresh, show_timer)
             if cv2.waitKey(50) & 0xFF == ord('q'):
                 break
 
+    def detect_images_in_path(self, img_dir):
+        """
+         Detect all images in a path
+        
+        Parameters:
+        ----------
+         img_dir : str
+             dir for images	  
+         
+        Returns:
+        ----------
+         None 
+        """
+        import cv2
+        img_list = GetFileListOrder(img_dir, 'True', '.jpg')
+        print ('image dir : {}'.format(img_dir))
+        img_list_file = os.path.join(img_dir, 'test.txt')
+        print "Write image list in {}".format(img_list_file)
+        with open(img_list_file, 'w') as f:
+            for img_file in img_list:
+                f.write(img_file.split('/')[-1] + '\n')
+
+        for img_file in img_list:
+            img = cv2.imread(img_file)
+            thresh = 0.3
+            self.detect_one_image(img, thresh, show_timer = True)
+            if cv2.waitKey() & 0xFF == ord('q'):
+                break
+
+
+    def detect_one_image(self, cv_img, thresh = 0.3, show_timer = False):
+        """
+         Detect and plot for one image
+        
+        Parameters:
+        ----------
+         cv_img : np.array
+             Image for opencv format
+         thresh : float
+             class_pred thresh
+        Returns:
+        ----------
+         None 
+        """
+        import cv2
+        rects = self.get_detected_result(cv_img, thresh, show_timer)
+        for i in range(rects.shape[0]):
+            color = [255, 0, 0]
+            xmin = rects[i, 0]
+            ymin = rects[i, 1]
+            xmax = rects[i, 2]
+            ymax = rects[i, 3]
+            cv2.rectangle(cv_img, (xmin, ymin), (xmax, ymax), color, 3)
+        cv_img  = cv2.resize(cv_img, (640, 480))
+        cv2.imshow('frame', cv_img)
+
+    def save_results_to_file(self, root_dir, img_list_file, image_dir, save_dir):
+        """
+         Save detected results in file for images in img_list_file
+        
+        Parameters:
+        ----------
+         root_dir : str
+             root dir for all files
+         img_list_file : str
+             images list file to be detected	  
+         image_dir : str
+             total images dir
+         save_dir : str
+             dir for results to be saved in 
+        Returns:
+        ----------
+         None 
+        """
+        img_list_path = os.path.join(root_dir, img_list_file)
+        with open(img_list_path, 'r') as f:
+            print "Open {}".format(img_list_path)
+            total_images_list = f.readlines()
+            num_images = len(total_images_list)
+            for count, img_file in enumerate(total_images_list):
+                img_name = img_file.split()[0]
+                out_rect_file = img_name.replace('.jpg', '.txt')
+                img_path = os.path.join(root_dir, image_dir, img_name)
+                out_rect_file_path = os.path.join(root_dir, save_dir, out_rect_file)
+                img = cv2.imread(img_path)
+                rects = self.get_detected_result(img, thresh = 0.3, show_timer = False)
+                np.savetxt(out_rect_file_path, rects)
+                sys.stdout.write("Write results[{}/{}] in {}\r".format(count, num_images, out_rect_file))
+#                assert count <= 20, "Debug"
+                
+    def get_detected_result(self, cv_img, thresh = 0.3, show_timer = False):
+        """
+         Get detected results for one image
+        
+        Parameters:
+        ----------
+         cv_img : np.array
+             Image for opencv format
+         thresh : float
+             class_pred thresh
+        Returns:
+        ----------
+         rects : np.array
+             shape : num_object x 4[xmin, ymin, xmax, ymax]
+        """
+        import cv2
+        frame = cv_img
+        width = frame.shape[1]
+        height = frame.shape[0]
+        data = resize(frame, (self.data_shape, self.data_shape), cv2.INTER_LINEAR)
+        data = transform(data, self.mean_pixels)
+        mx_img_batch = mx.nd.array([data, ])
+        data_batch = mx.io.DataBatch(data = [mx_img_batch], label = [None])
+        start = timer()
+        self.mod.forward(data_batch, is_train = False)
+        time_elapsed = timer() - start
+        detections = self.mod.get_outputs()[0].asnumpy()
+        det = detections[0, :, :]
+        results = det[np.where(det[:, 0] >= 0)[0]]
+        rect = []
+        for i in range(results.shape[0]):
+            score = results[i, 1]
+            if score > thresh:
+                xmin = int(results[i, 2] * width)
+                ymin = int(results[i, 3] * height)
+                xmax = int(results[i, 4] * width)
+                ymax = int(results[i, 5] * height)
+                rect.append([xmin, ymin, xmax, ymax])
+        if show_timer:
+            print "Detection time : {:.4f} sec".format(time_elapsed)
+        return np.array(rect)

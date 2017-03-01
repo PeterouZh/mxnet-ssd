@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument('--ext', dest='extension', help='image extension, optional',
                         type=str, nargs='?')
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
-                        default=4700, type=int)
+                        default=1600, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
                         default=os.path.join(os.getcwd(), 'model', 'ssd_back_side_head'), type=str)
     parser.add_argument('--cpu', dest='cpu', help='(override GPU) use CPU to detect',
@@ -63,7 +63,7 @@ def parse_args():
                         help='green mean value')
     parser.add_argument('--mean-b', dest='mean_b', type=float, default=104,
                         help='blue mean value')
-    parser.add_argument('--thresh', dest='thresh', type=float, default=0.5,
+    parser.add_argument('--thresh', dest='thresh', type=float, default=0.6,
                         help='object visualize score threshold, default 0.6')
     parser.add_argument('--nms', dest='nms_thresh', type=float, default=0.5,
                         help='non-maximum suppression threshold, default 0.5')
@@ -90,7 +90,26 @@ if __name__ == '__main__':
                             (args.mean_r, args.mean_g, args.mean_b),
                             ctx, args.nms_thresh, args.force_nms)
     # run detection
-    # detector.detect_and_visualize(image_list, args.dir, args.extension,
-    #                               CLASSES, args.thresh, args.show_timer)
+#    detector.detect_and_visualize(image_list, args.dir, args.extension,
+#                                  CLASSES, args.thresh, args.show_timer)
 
-    detector.detect_using_camera(show_timer = True)
+# Open camera and detect
+#    detector.detect_using_camera(show_timer = True)
+
+# Val images in one dir
+    img_dir = '/home/shhs/usr/data/back_side_head/back_side_head_val'
+    # detector.detect_images_in_path(img_dir)
+
+    # Save detected results in txt files
+    root_dir = '/home/shhs/usr/data/back_side_head/test'
+    img_list_file_test = 'gg_test_lstm_7600_n.txt'
+    image_dir = 'total_pic'
+    save_dir_test = 'gg_test_lstm_7600_n_results'
+#    detector.save_results_to_file(root_dir, img_list_file_test, image_dir, save_dir_test)
+    img_list_file_val = 'gg_val_lstm_7600_n.txt'
+    save_dir_val = 'gg_val_lstm_7600_n_results'
+#    detector.save_results_to_file(root_dir, img_list_file_val, image_dir, save_dir_val)
+    img_list_file = 'test.txt'
+    image_dir = 'back_side_head_val'
+    save_dir = 'back_side_head_val_results'
+    # detector.save_results_to_file(root_dir, img_list_file, image_dir, save_dir)

@@ -64,7 +64,7 @@ def parse_args():
     parser.add_argument('--monitor', dest='monitor', type=int, default=0,
                         help='log network parameters every N iters if larger than 0')
     parser.add_argument('--mat', dest='mat', type = str, default = 'mat',
-                        help = 'annotations subdir of back side of head dataset')
+                        help = 'annotations subdir or label file of back side of head dataset')
     parser.add_argument('--parent_path', dest = 'parent_path', type = str, default = '',
                         help = 'parent dir of image_set and mat')
     args = parser.parse_args()
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     args.dataset = 'back_side_head'
     args.image_set = 'back_side_head_train'
     args.val_image_set = 'back_side_head_val'
-    args.mat = 'mat'
+    args.mat = 'back_head_label.mat'
     args.parent_path = '/home/shhs/usr/data/back_side_head'
     args.batch_size = 16
     args.data_shape = 512
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     args.lr_refactor_epoch = 10000000
     args.learning_rate = 0.001
     args.prefix = os.path.join(os.getcwd(), 'model', 'ssd_back_side_head')
-    args.resume = 4700
+    args.resume = 0
     train_net(args.network,
               args.dataset,
               args.image_set,
