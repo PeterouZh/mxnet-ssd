@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument('--momentum', dest='momentum', type=float,
                         default=0.9, help='momentum')
     parser.add_argument('--wd', dest='weight_decay', type=float,
-                        default=0.0001, help='weight decay')
+                        default=0.00005, help='weight decay')
     parser.add_argument('--mean-r', dest='mean_r', type=float, default=123,
                         help='red mean value')
     parser.add_argument('--mean-g', dest='mean_g', type=float, default=117,
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     ctx = mx.cpu() if not ctx else ctx
     # resume
     args.prefix = os.path.join(os.getcwd(), 'model', 'ssd')
-    args.resume = 257
+    args.resume = 376
     train_net(args.network, args.dataset, args.image_set, args.year,
               args.devkit_path, args.batch_size,
               args.data_shape, (args.mean_r, args.mean_g, args.mean_b),

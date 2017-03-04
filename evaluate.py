@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument('--batch-size', dest='batch_size', type=int, default=32,
                         help='evaluation batch size')
     parser.add_argument('--epoch', dest='epoch', help='epoch of pretrained model',
-                        default=257, type=int)
+                        default=376, type=int)
     parser.add_argument('--prefix', dest='prefix', help='load model prefix',
                         default=os.path.join(os.getcwd(), 'model', 'ssd'), type=str)
     parser.add_argument('--gpus', dest='gpu_id', help='GPU devices to evaluate with',
