@@ -48,7 +48,7 @@ def parse_args():
     parser.add_argument('--ext', dest='extension', help='image extension, optional',
                         type=str, nargs='?')
     parser.add_argument('--epoch', dest='epoch', help='epoch of trained model',
-                        default=1600, type=int)
+                        default=4700, type=int)
     parser.add_argument('--prefix', dest='prefix', help='trained model prefix',
                         default=os.path.join(os.getcwd(), 'model', 'ssd_back_side_head'), type=str)
     parser.add_argument('--cpu', dest='cpu', help='(override GPU) use CPU to detect',
@@ -113,3 +113,16 @@ if __name__ == '__main__':
     image_dir = 'back_side_head_val'
     save_dir = 'back_side_head_val_results'
     # detector.save_results_to_file(root_dir, img_list_file, image_dir, save_dir)
+
+    # detector.save_results_to_file('/home/shhs/usr/data/back_side_head/test',
+    #                               'total_pic/test.txt',
+    #                               'total_pic',
+    #                               'total_pic_results')
+
+    detector.save_results_to_file('/home/shhs/usr/data/back_side_head/test',
+                                  'bh/test.txt',
+                                  'bh',
+                                  'bh_results')
+
+    # Get images file list
+#    detector.detect_images_in_path('/home/shhs/usr/data/back_side_head/test/bh')

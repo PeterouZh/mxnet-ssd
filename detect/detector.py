@@ -259,6 +259,9 @@ class Detector(object):
         ----------
          None 
         """
+        temp = os.path.join(root_dir, save_dir)
+        if not os.path.exists(temp):
+            os.makedirs(temp)
         img_list_path = os.path.join(root_dir, img_list_file)
         with open(img_list_path, 'r') as f:
             print "Open {}".format(img_list_path)
